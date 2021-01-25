@@ -1,5 +1,6 @@
 package com.mz.fs.controllers;
 
+import com.mz.fs.dto.DeleteFileResponse;
 import com.mz.fs.dto.FileUploadResponse;
 import com.mz.fs.services.FileUploadService;
 import lombok.AllArgsConstructor;
@@ -32,4 +33,8 @@ public class FileController {
                 .body(file);
     }
 
+    @DeleteMapping("/{fileId}")
+    public ResponseEntity<DeleteFileResponse> deleteFile(@PathVariable String fileId) {
+        return ResponseEntity.ok(fis.deleteFile(fileId));
+    }
 }

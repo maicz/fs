@@ -1,5 +1,6 @@
 package com.mz.fs.services;
 
+import com.mz.fs.dto.DeleteFileResponse;
 import com.mz.fs.dto.FileUploadResponse;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
@@ -14,13 +15,14 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.UUID;
 
 @Service
 public class FileUploadService {
 
-    private final Path fileStorageLocationl = Paths.get("D:\\Workspace\\temp\\").toAbsolutePath().normalize();
+    private final Path fileStorageLocation = Paths.get("D:\\Files\\").toAbsolutePath().normalize();
 
     public FileUploadResponse uploadFile(MultipartFile file) {
         String fileId = UUID.randomUUID().toString();
@@ -28,10 +30,10 @@ public class FileUploadService {
             throw new RuntimeException("File is empty");
         }
         try {
-            Files.createDirectories(Paths.get(fileStorageLocationl + fileId));
+            Files.createDirectories(Paths.get(fileStorageLocation + File.separator + fileId));
             Files.copy(
                     file.getInputStream(),
-                    Paths.get(fileStorageLocationl + fileId + "\\" + file.getOriginalFilename()),
+                    Paths.get(fileStorageLocation + File.separator + fileId + File.separator + file.getOriginalFilename()),
                     StandardCopyOption.REPLACE_EXISTING);
         } catch (IOException e) {
             throw new RuntimeException("Failed to store file");
@@ -46,16 +48,36 @@ public class FileUploadService {
 
     public Resource getFile(String fileId) {
         try {
-            UrlResource urlResource = new UrlResource(Paths.get(fileStorageLocationl + File.separator + fileId).toUri());
+            UrlResource urlResource = new UrlResource(Paths.get(fileStorageLocation + File.separator + fileId).toUri());
             if (urlResource.exists()) {
-                String name = Arrays.stream(new File(fileStorageLocationl + File.separator + fileId).listFiles()).findFirst().get().getName();
-                return new UrlResource(Paths.get(fileStorageLocationl + File.separator + fileId + File.separator + name).toUri());
+                File fileLocation = new File(fileStorageLocation + File.separator + fileId);
+                File[] fileList = fileLocation.listFiles();
+                if (null != fileList) {
+                    File file = Arrays.stream(fileList).findFirst().orElseThrow(() -> new RuntimeException("File not found"));
+                    return new UrlResource(Paths.get(fileStorageLocation + File.separator + fileId + File.separator + file.getName()).toUri());
+                } else {
+                    throw new RuntimeException("File not found.");
+                }
             } else {
                 throw new RuntimeException("File not found.");
             }
         } catch (MalformedURLException e) {
             throw new RuntimeException("File not found.");
         }
+
+    }
+
+    public DeleteFileResponse deleteFile(String fileId) {
+        try {
+            Files.walk(Paths.get(fileStorageLocation + File.separator + fileId))
+                    .sorted(Comparator.reverseOrder())
+                    .map(Path::toFile)
+                    .forEach(File::delete);
+            return new DeleteFileResponse("File deleted successfully", new Date().toString());
+        } catch (IOException e) {
+            throw new RuntimeException("File not found.");
+        }
+
 
     }
 }
