@@ -2,8 +2,10 @@ package com.mz.fs.services;
 
 import com.mz.fs.dto.DeleteFileResponse;
 import com.mz.fs.dto.FileUploadResponse;
+import com.mz.fs.exceptions.FsException;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -27,7 +29,7 @@ public class FileUploadService {
     public FileUploadResponse uploadFile(MultipartFile file) {
         String fileId = UUID.randomUUID().toString();
         if (file.isEmpty()) {
-            throw new RuntimeException("File is empty");
+            throw new FsException(UUID.randomUUID().toString(), HttpStatus.BAD_REQUEST, "File not found.", new Date().toString());
         }
         try {
             Files.createDirectories(Paths.get(fileStorageLocation + File.separator + fileId));
@@ -36,7 +38,7 @@ public class FileUploadService {
                     Paths.get(fileStorageLocation + File.separator + fileId + File.separator + file.getOriginalFilename()),
                     StandardCopyOption.REPLACE_EXISTING);
         } catch (IOException e) {
-            throw new RuntimeException("Failed to store file");
+            throw new FsException(UUID.randomUUID().toString(), HttpStatus.NOT_FOUND, "File not found.", new Date().toString());
         }
         return FileUploadResponse.builder()
                 .fileId(fileId)
@@ -56,17 +58,22 @@ public class FileUploadService {
                     File file = Arrays.stream(fileList).findFirst().orElseThrow(() -> new RuntimeException("File not found"));
                     return new UrlResource(Paths.get(fileStorageLocation + File.separator + fileId + File.separator + file.getName()).toUri());
                 } else {
-                    throw new RuntimeException("File not found.");
+                    throw new FsException(UUID.randomUUID().toString(), HttpStatus.NOT_FOUND, "File not found.", new Date().toString());
                 }
             } else {
-                throw new RuntimeException("File not found.");
+                throw new FsException(UUID.randomUUID().toString(), HttpStatus.NOT_FOUND, "File not found.", new Date().toString());
             }
         } catch (MalformedURLException e) {
-            throw new RuntimeException("File not found.");
+            throw new FsException(UUID.randomUUID().toString(), HttpStatus.NOT_FOUND, "File not found.", new Date().toString());
         }
 
     }
 
+
+    /**
+     * @param fileId the id of the file which needs to be deleted
+     * @return {@link DeleteFileResponse} the response DTO which is returned by the API.
+     */
     public DeleteFileResponse deleteFile(String fileId) {
         try {
             Files.walk(Paths.get(fileStorageLocation + File.separator + fileId))
@@ -75,9 +82,7 @@ public class FileUploadService {
                     .forEach(File::delete);
             return new DeleteFileResponse("File deleted successfully", new Date().toString());
         } catch (IOException e) {
-            throw new RuntimeException("File not found.");
+            throw new FsException(UUID.randomUUID().toString(), HttpStatus.NOT_FOUND, "File not found.", new Date().toString());
         }
-
-
     }
 }
